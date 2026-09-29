@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>우산알림 - Sparkle Edition</title>
+    <!-- 카카오 우편번호 API -->
+    <script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
+
+        :root {
+            --bg-black: #030308;
+            --card-bg: rgba(18, 18, 28, 0.85);
+            --neon-pink: #ff007f;
+            --neon-cyan: #00f3ff;
+            --neon-yellow: #ffe600;
+            --neon-green: #00ff66;
+            --neon-purple: #b026ff;
+            --text-main: #ffffff;
+            --text-sub: #b0b0c0;
+        }
+
+        * { box-sizing: border-box; font-family: 'Noto Sans KR', sans-serif; }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--text-main);
+            margin: 0;
+            padding: 24px 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* ✨ 반짝이는 배경 파티클 효과 */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: 
+                radial-gradient(2px 2px at 20px 30px, #ffffff, rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 40px 70px, var(--neon-cyan), rgba(0,0,0,0)),
+                radial-gradient(3px 3px at 80px 120px, var(--neon-pink), rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 150px 200px, var(--neon-yellow), rgba(0,0,0,0)),
+                radial-gradient(3px 3px at 250px 310px, #ffffff, rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 350px 180px, var(--neon-purple), rgba(0,0,0,0));
+            background-repeat: repeat;
+            background-size: 400px 400px;
+            opacity: 0.7;
+            animation: twinkleBackground 6s linear infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        @keyframes twinkleBackground {
+            0% { transform: translateY(0); opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { transform: translateY(-400px); opacity: 0.5; }
+        }
+
+        .header, .card { position: relative; z-index: 1; }
+
+        .header {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        /* ✨ 반짝이는 네온 타이틀 */
+        .header h1 {
+            font-size: 36px;
+            font-weight: 900;
+            background: linear-gradient(90deg, var(--neon-pink), var(--neon-yellow), var(--neon-cyan), var(--neon-purple), var(--neon-pink));
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0 0 6px 0;
+            animation: gradientSparkle 4s ease infinite;
+            filter: drop-shadow(0 0 12px rgba(0, 243, 255, 0.6));
+        }
+
+        .header p {
+            color: var(--neon-cyan);
+            font-size: 14px;
+            margin: 0;
+            letter-spacing: 2px;
+            text-shadow: 0 0 8px var(--neon-cyan);
+        }
+
+        /* ✨ 반짝이는 테두리 카드 (Glassmorphic Glow) */
+        .card {
+            background: var(--card-bg);
+            border: 2px solid transparent;
+            border-radius: 28px;
+            padding: 28px;
+            box-shadow: 0 0 25px rgba(176, 38, 255, 0.25), inset 0 0 15px rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(16px);
+            width: 100%;
+            max-width: 480px;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::after {
+            content: "";
+            position: absolute;
+            top: -50%; left: -50%; width: 200%; height: 200%;
+            background: linear-gradient(60deg, transparent, rgba(255,255,255,0.1), transparent);
+            transform: rotate(30deg);
+            animation: cardShimmer 5s infinite;
+        }
+
+        @keyframes cardShimmer {
+            0% { transform: translateX(-100%) rotate(30deg); }
+            20% { transform: translateX(100%) rotate(30deg); }
+            100% { transform: translateX(100%) rotate(30deg); }
+        }
+
+        .step-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: var(--neon-yellow);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-shadow: 0 0 8px var(--neon-yellow);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        input[type="text"], input[type="time"] {
+            width: 100%;
+            padding: 14px 16px;
+            background: #0d0d15;
+            border: 2px solid #2a2a45;
+            border-radius: 14px;
+            font-size: 15px;
+            color: #fff;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        input[type="text"]:focus, input[type="time"]:focus {
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 15px var(--neon-cyan);
+        }
+
+        .search-btn {
+            background: linear-gradient(135deg, var(--neon-purple), var(--neon-pink));
+            color: #fff;
+            border: none;
+            padding: 0 18px;
+            border-radius: 14px;
+            cursor: pointer;
+            font-weight: 700;
+            white-space: nowrap;
+            box-shadow: 0 0 15px var(--neon-pink);
+            transition: transform 0.2s;
+        }
+
+        .search-btn:hover { transform: scale(1.05); }
+
+        .time-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 15px;
+        }
+
+        .time-row.morning {
+            padding-bottom: 14px;
+            border-bottom: 1px dashed #3a3a55;
+            margin-bottom: 18px;
+        }
+
+        /* 💖✨ 극강의 반짝이는 액체 모핑 버튼 */
+        .unique-btn-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        .liquid-drop-btn {
+            width: 85px;
+            height: 85px;
+            background: linear-gradient(135deg, var(--neon-pink), var(--neon-cyan), var(--neon-yellow), var(--neon-purple));
+            background-size: 300% 300%;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 30px;
+            font-weight: bold;
+            border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+            animation: morph 5s ease-in-out infinite, pulseGlow 2.5s ease-in-out infinite, gradientSparkle 3s ease infinite;
+            transition: transform 0.2s;
+            position: relative;
+            outline: none;
+        }
+
+        /* 버튼 위 빛 산란 스파클 */
+        .liquid-drop-btn::before {
+            content: "✨";
+            position: absolute;
+            top: -10px;
+            right: -5px;
+            font-size: 18px;
+            animation: sparkleIcon 1.5s infinite alternate;
+        }
+
+        .liquid-drop-btn:hover {
+            transform: scale(1.15) rotate(12deg);
+        }
+
+        @keyframes morph {
+            0% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+            50% { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; }
+            100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+        }
+
+        @keyframes pulseGlow {
+            0% { box-shadow: 0 0 20px var(--neon-pink), 0 0 40px var(--neon-cyan); }
+            50% { box-shadow: 0 0 35px var(--neon-yellow), 0 0 60px var(--neon-purple); }
+            100% { box-shadow: 0 0 20px var(--neon-pink), 0 0 40px var(--neon-cyan); }
+        }
+
+        @keyframes gradientSparkle {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes sparkleIcon {
+            0% { opacity: 0.3; transform: scale(0.8) rotate(0deg); }
+            100% { opacity: 1; transform: scale(1.3) rotate(20deg); }
+        }
+
+        /* 결과 표 화면 */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            background: #0d0d15;
+            padding: 12px 18px;
+            border-radius: 16px;
+            border: 1px solid #2a2a45;
+        }
+
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: var(--neon-green);
+            text-shadow: 0 0 6px var(--neon-green);
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+
+        .switch input { opacity: 0; width: 0; height: 0; }
+
+        .slider {
+            position: absolute; cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #2a2a45;
+            transition: .3s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute; content: "";
+            height: 18px; width: 18px;
+            left: 3px; bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider { background-color: var(--neon-pink); box-shadow: 0 0 10px var(--neon-pink); }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        .edit-btn {
+            background: transparent;
+            border: 1px solid var(--neon-cyan);
+            color: var(--neon-cyan);
+            border-radius: 10px;
+            padding: 6px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            font-weight: 700;
+            box-shadow: 0 0 8px var(--neon-cyan);
+        }
+
+        /* 테이블 */
+        .weather-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            margin-top: 10px;
+        }
+
+        .weather-table th, .weather-table td {
+            padding: 12px 6px;
+            text-align: center;
+            border-bottom: 1px solid #222238;
+        }
+
+        .weather-table th {
+            color: var(--neon-cyan);
+            font-weight: 700;
+            text-shadow: 0 0 6px var(--neon-cyan);
+        }
+
+        .rain-drops {
+            color: var(--neon-cyan);
+            letter-spacing: -2px;
+            font-size: 14px;
+            filter: drop-shadow(0 0 6px var(--neon-cyan));
+        }
+
+        .badge-must { color: var(--neon-pink); font-weight: bold; text-shadow: 0 0 10px var(--neon-pink); }
+        .badge-sub { color: var(--neon-yellow); font-weight: bold; text-shadow: 0 0 8px var(--neon-yellow); }
+        .badge-none { color: var(--text-sub); }
+
+        /* 체크리스트 */
+        .checklist-card {
+            background: rgba(0, 243, 255, 0.05);
+            border: 1px solid var(--neon-cyan);
+            border-radius: 18px;
+            padding: 18px;
+            margin-top: 24px;
+            box-shadow: inset 0 0 15px rgba(0, 243, 255, 0.1);
+        }
+
+        .checklist-card h3 {
+            margin: 0 0 12px 0;
+            font-size: 15px;
+            color: var(--neon-cyan);
+            text-shadow: 0 0 8px var(--neon-cyan);
+        }
+
+        .check-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            margin-bottom: 8px;
+            color: var(--text-main);
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>✨ 우산알림 ✨</h1>
+        <p>✦ SPARKLE & GLITTER EDITION ✦</p>
+    </div>
+
+    <!-- 1단계: 동네 입력 -->
+    <div id="step1" class="card">
+        <div class="step-title">📍 1단계: 사는 동네 설정 ✨</div>
+        <p style="font-size: 13px; color: var(--text-sub); margin-bottom: 18px;">
+            정확한 핀포인트 예보를 위해 사는 동네(읍/면/동)를 선택하세요.
+        </p>
+        <div class="input-group">
+            <input type="text" id="locationInput" placeholder="동네 검색을 눌러주세요" readonly>
+            <button class="search-btn" onclick="openAddressSearch()">동네 검색</button>
+        </div>
+        <div class="unique-btn-container">
+            <button class="liquid-drop-btn" onclick="goToStep2()">➔</button>
+        </div>
+    </div>
+
+    <!-- 2단계: 시간표 입력 -->
+    <div id="step2" class="card hidden">
+        <div class="step-title">⏰ 2단계: 등/하교 시간표 설정 ✨</div>
+        <div class="time-row morning">
+            <label>☀️ <strong style="color: var(--neon-yellow);">등교 시간 (공통)</strong></label>
+            <input type="time" id="goTime" value="08:00" style="width: auto;">
+        </div>
+        <div class="time-row"><label>월요일 하교</label><input type="time" id="monTime" value="15:30" style="width: auto;"></div>
+        <div class="time-row"><label>화요일 하교</label><input type="time" id="tueTime" value="15:30" style="width: auto;"></div>
+        <div class="time-row"><label>수요일 하교</label><input type="time" id="wedTime" value="14:30" style="width: auto;"></div>
+        <div class="time-row"><label>목요일 하교</label><input type="time" id="thuTime" value="16:30" style="width: auto;"></div>
+        <div class="time-row"><label>금요일 하교</label><input type="time" id="friTime" value="15:30" style="width: auto;"></div>
+
+        <div class="unique-btn-container">
+            <button class="liquid-drop-btn" onclick="saveAndShowTable()">➔</button>
+        </div>
+    </div>
+
+    <!-- 3단계: 결과 표 화면 -->
+    <div id="step3" class="card hidden">
+        <div class="top-bar">
+            <div class="toggle-container">
+                <label class="switch">
+                    <input type="checkbox" id="vacationToggle" onchange="toggleVacationMode()">
+                    <span class="slider"></span>
+                </label>
+                <span>🏝️ 방학 모드</span>
+            </div>
+            <button class="edit-btn" onclick="editSettings()">✏️ 설정 수정</button>
+        </div>
+
+        <div style="font-size: 14px; margin-bottom: 16px; color: var(--neon-cyan);">
+            🏡 <strong id="displayLocation" style="color: #fff;">-</strong>
+        </div>
+
+        <div class="step-title">📅 주간 핀포인트 예보 & 물방울 강도 ✨</div>
+        
+        <table class="weather-table">
+            <thead>
+                <tr>
+                    <th>요일</th>
+                    <th>날씨</th>
+                    <th>비 강도</th>
+                    <th>지참 여부</th>
+                    <th>우산 종류</th>
+                </tr>
+            </thead>
+            <tbody id="weeklyTableBody">
+                <!-- JS 생성 -->
+            </tbody>
+        </table>
+
+        <!-- 하교 후 우산 분실 방지 체크리스트 -->
+        <div class="checklist-card">
+            <h3>🌂 하교 우산 분실 방지 체크리스트 ✨</h3>
+            <div class="check-item">
+                <input type="checkbox" id="chk1">
+                <label for="chk1">교실이나 신발장에 우산을 두고 오지 않았나요?</label>
+            </div>
+            <div class="check-item">
+                <input type="checkbox" id="chk2">
+                <label for="chk2">우산 손잡이에 이름표가 붙어 있나요?</label>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.onload = () => {
+            registerServiceWorker();
+            loadSavedData();
+        };
+
+        function openAddressSearch() {
+            new daum.Postcode({
+                oncomplete: function(data) {
+                    document.getElementById('locationInput').value = data.address;
+                }
+            }).open();
+        }
+
+        function goToStep2() {
+            if (!document.getElementById('locationInput').value) {
+                alert('사는 동네를 먼저 선택해주세요!');
+                return;
+            }
+            document.getElementById('step1').classList.add('hidden');
+            document.getElementById('step2').classList.remove('hidden');
+        }
+
+        function saveAndShowTable() {
+            const settings = {
+                location: document.getElementById('locationInput').value,
+                goTime: document.getElementById('goTime').value,
+                timetable: {
+                    1: document.getElementById('monTime').value,
+                    2: document.getElementById('tueTime').value,
+                    3: document.getElementById('wedTime').value,
+                    4: document.getElementById('thuTime').value,
+                    5: document.getElementById('friTime').value
+                },
+                isVacation: false
+            };
+
+            localStorage.setItem('umbrellaSettings', JSON.stringify(settings));
+            requestNotificationPermission();
+            renderStep3(settings);
+        }
+
+        function renderStep3(settings) {
+            document.getElementById('step1').classList.add('hidden');
+            document.getElementById('step2').classList.add('hidden');
+            document.getElementById('step3').classList.remove('hidden');
+
+            document.getElementById('displayLocation').innerText = settings.location;
+            document.getElementById('vacationToggle').checked = settings.isVacation;
+
+            generateWeeklyForecast();
+        }
+
+        // 비 강도에 따라 물방울 이모티콘(💧)을 최대 5개까지 반환
+        function getRainDropEmojis(intensity) {
+            if (intensity <= 0) return '<span style="color:#666;">-</span>';
+            let count = 1;
+            if (intensity > 25) count = 5;       // 폭우 (💧💧💧💧💧)
+            else if (intensity > 15) count = 4;  // 강한 비 (💧💧💧💧)
+            else if (intensity > 8) count = 3;   // 보통 비 (💧💧💧)
+            else if (intensity > 3) count = 2;   // 약한 비 (💧💧)
+            
+            return `<span class="rain-drops">${'💧'.repeat(count)}</span>`;
+        }
+
+        // 주간 날씨 생성
+        function generateWeeklyForecast() {
+            const days = ['월', '화', '수', '목', '금'];
+            const tbody = document.getElementById('weeklyTableBody');
+            tbody.innerHTML = '';
+
+            const weatherScenarios = [
+                { status: '맑음 ☀️', intensity: 0, need: '<span class="badge-none">불필요</span>', type: '없음' },
+                { status: '구름 ⛅', intensity: 0, need: '<span class="badge-none">불필요</span>', type: '없음' },
+                { status: '약한비 🌧️', intensity: 2.5, need: '<span class="badge-sub">챙기기</span>', type: '3단 접이식' },
+                { status: '비 🌧️', intensity: 12.0, need: '<span class="badge-must">필수 지참</span>', type: '장우산' },
+                { status: '폭우 ⛈️', intensity: 28.5, need: '<span class="badge-must">필수 지참</span>', type: '튼튼한 장우산' }
+            ];
+
+            days.forEach((day) => {
+                const sample = weatherScenarios[Math.floor(Math.random() * weatherScenarios.length)];
+                const dropDisplay = getRainDropEmojis(sample.intensity);
+
+                const row = `
+                    <tr>
+                        <td><strong style="color:var(--neon-green);">${day}</strong></td>
+                        <td style="font-size:15px;">${sample.status}</td>
+                        <td>${dropDisplay}</td>
+                        <td>${sample.need}</td>
+                        <td style="color:var(--text-sub);">${sample.type}</td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        function toggleVacationMode() {
+            const settings = JSON.parse(localStorage.getItem('umbrellaSettings'));
+            settings.isVacation = document.getElementById('vacationToggle').checked;
+            localStorage.setItem('umbrellaSettings', JSON.stringify(settings));
+
+            if (settings.isVacation) {
+                alert('🏝️ 방학 모드가 켜졌습니다. 알림이 일시정지됩니다.');
+            } else {
+                alert('🔔 알림이 활성화되었습니다.');
+            }
+        }
+
+        function editSettings() {
+            document.getElementById('step3').classList.add('hidden');
+            document.getElementById('step1').classList.remove('hidden');
+        }
+
+        function loadSavedData() {
+            const saved = localStorage.getItem('umbrellaSettings');
+            if (saved) {
+                const settings = JSON.parse(saved);
+                document.getElementById('locationInput').value = settings.location;
+                document.getElementById('goTime').value = settings.goTime;
+                document.getElementById('monTime').value = settings.timetable[1];
+                document.getElementById('tueTime').value = settings.timetable[2];
+                document.getElementById('wedTime').value = settings.timetable[3];
+                document.getElementById('thuTime').value = settings.timetable[4];
+                document.getElementById('friTime').value = settings.timetable[5];
+
+                renderStep3(settings);
+            }
+        }
+
+        function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('./sw.js').catch(console.error);
+            }
+        }
+
+        function requestNotificationPermission() {
+            if ('Notification' in window && Notification.permission !== 'granted') {
+                Notification.requestPermission();
+            }
+        }
+    </script>
+</body>
+</html>
